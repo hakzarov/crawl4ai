@@ -103,7 +103,7 @@ class ManagedBrowser:
         logger=None,
         host: str = "localhost",
         debugging_port: int = 9222,
-        cdp_url: Optional[str] = None, 
+        cdp_url: Optional[str] = None,
     ):
         """
         Initialize the ManagedBrowser instance.
@@ -136,7 +136,7 @@ class ManagedBrowser:
         Starts the browser process or returns CDP endpoint URL.
         If cdp_url is provided, returns it directly.
         If user_data_dir is not provided for local browser, creates a temporary directory.
-        
+
         Returns:
             str: CDP endpoint URL
         """
@@ -339,7 +339,7 @@ class BrowserManager:
 
         # Keep track of contexts by a "config signature," so each unique config reuses a single context
         self.contexts_by_config = {}
-        self._contexts_lock = asyncio.Lock() 
+        self._contexts_lock = asyncio.Lock()
 
         # Initialize ManagedBrowser if needed
         if self.config.use_managed_browser:
@@ -349,6 +349,7 @@ class BrowserManager:
                 headless=self.config.headless,
                 logger=self.logger,
                 debugging_port=self.config.debugging_port,
+                cdp_url=self.config.cdp_url,
             )
 
     async def start(self):
@@ -521,9 +522,9 @@ class BrowserManager:
             context.set_default_navigation_timeout(DOWNLOAD_PAGE_TIMEOUT)
             if self.config.downloads_path:
                 context._impl_obj._options["accept_downloads"] = True
-                context._impl_obj._options[
-                    "downloads_path"
-                ] = self.config.downloads_path
+                context._impl_obj._options["downloads_path"] = (
+                    self.config.downloads_path
+                )
 
         # Handle user agent and browser hints
         if self.config.user_agent:
@@ -540,9 +541,11 @@ class BrowserManager:
                 {
                     "name": "cookiesEnabled",
                     "value": "true",
-                    "url": crawlerRunConfig.url
-                    if crawlerRunConfig
-                    else "https://crawl4ai.com/",
+                    "url": (
+                        crawlerRunConfig.url
+                        if crawlerRunConfig
+                        else "https://crawl4ai.com/"
+                    ),
                 }
             ]
         )
@@ -554,7 +557,7 @@ class BrowserManager:
                 or crawlerRunConfig.simulate_user
                 or crawlerRunConfig.magic
             ):
-                await context.add_init_script(load_js_script("navigator_overrider"))        
+                await context.add_init_script(load_js_script("navigator_overrider"))
 
     async def create_browser_context(self, crawlerRunConfig: CrawlerRunConfig = None):
         """
@@ -565,7 +568,7 @@ class BrowserManager:
             Context: Browser context object with the specified configurations
         """
         # Base settings
-        user_agent = self.config.headers.get("User-Agent", self.config.user_agent) 
+        user_agent = self.config.headers.get("User-Agent", self.config.user_agent)
         viewport_settings = {
             "width": self.config.viewport_width,
             "height": self.config.viewport_height,
@@ -638,7 +641,7 @@ class BrowserManager:
             "device_scale_factor": 1.0,
             "java_script_enabled": self.config.java_script_enabled,
         }
-        
+
         if crawlerRunConfig:
             # Check if there is value for crawlerRunConfig.proxy_config set add that to context
             if crawlerRunConfig.proxy_config:
@@ -646,10 +649,12 @@ class BrowserManager:
                     "server": crawlerRunConfig.proxy_config.get("server"),
                 }
                 if crawlerRunConfig.proxy_config.get("username"):
-                    proxy_settings.update({
-                        "username": crawlerRunConfig.proxy_config.get("username"),
-                        "password": crawlerRunConfig.proxy_config.get("password"),
-                    })
+                    proxy_settings.update(
+                        {
+                            "username": crawlerRunConfig.proxy_config.get("username"),
+                            "password": crawlerRunConfig.proxy_config.get("password"),
+                        }
+                    )
                 context_settings["proxy"] = proxy_settings
 
         if self.config.text_mode:
@@ -690,7 +695,7 @@ class BrowserManager:
             "cache_mode",
             "content_filter",
             "semaphore_count",
-            "url"
+            "url",
         ]
         for key in ephemeral_keys:
             if key in config_dict:
@@ -789,7 +794,7 @@ class BrowserManager:
                 self.logger.error(
                     message="Error closing context: {error}",
                     tag="ERROR",
-                    params={"error": str(e)}
+                    params={"error": str(e)},
                 )
         self.contexts_by_config.clear()
 
@@ -1265,7 +1270,7 @@ class AsyncPlaywrightCrawlerStrategy(AsyncCrawlerStrategy):
         config.url = url
         response_headers = {}
         status_code = None
-        redirected_url = url 
+        redirected_url = url
 
         # Reset downloaded files list for new crawl
         self._downloaded_files = []
@@ -1292,7 +1297,9 @@ class AsyncPlaywrightCrawlerStrategy(AsyncCrawlerStrategy):
             await context.add_init_script(load_js_script("navigator_overrider"))
 
         # Call hook after page creation
-        await self.execute_hook("on_page_context_created", page, context=context, config=config)
+        await self.execute_hook(
+            "on_page_context_created", page, context=context, config=config
+        )
 
         # Set up console logging if requested
         if config.log_console:
@@ -1333,7 +1340,9 @@ class AsyncPlaywrightCrawlerStrategy(AsyncCrawlerStrategy):
 
             # Handle page navigation and content loading
             if not config.js_only:
-                await self.execute_hook("before_goto", page, context=context, url=url, config=config)
+                await self.execute_hook(
+                    "before_goto", page, context=context, url=url, config=config
+                )
 
                 try:
                     # Generate a unique nonce for this request
@@ -1354,7 +1363,12 @@ class AsyncPlaywrightCrawlerStrategy(AsyncCrawlerStrategy):
                     raise RuntimeError(f"Failed on navigating ACS-GOTO:\n{str(e)}")
 
                 await self.execute_hook(
-                    "after_goto", page, context=context, url=url, response=response, config=config
+                    "after_goto",
+                    page,
+                    context=context,
+                    url=url,
+                    response=response,
+                    config=config,
                 )
 
                 if response is None:
@@ -1528,7 +1542,9 @@ class AsyncPlaywrightCrawlerStrategy(AsyncCrawlerStrategy):
                         params={"error": execution_result.get("error")},
                     )
 
-                await self.execute_hook("on_execution_started", page, context=context, config=config)
+                await self.execute_hook(
+                    "on_execution_started", page, context=context, config=config
+                )
 
             # Handle user simulation
             if config.simulate_user or config.magic:
@@ -1571,7 +1587,9 @@ class AsyncPlaywrightCrawlerStrategy(AsyncCrawlerStrategy):
                 page = await self.process_iframes(page)
 
             # Pre-content retrieval hooks and delay
-            await self.execute_hook("before_retrieve_html", page, context=context, config=config)
+            await self.execute_hook(
+                "before_retrieve_html", page, context=context, config=config
+            )
             if config.delay_before_return_html:
                 await asyncio.sleep(config.delay_before_return_html)
 
@@ -1582,7 +1600,11 @@ class AsyncPlaywrightCrawlerStrategy(AsyncCrawlerStrategy):
             # Get final HTML content
             html = await page.content()
             await self.execute_hook(
-                "before_return_html", page=page, html=html, context=context, config=config
+                "before_return_html",
+                page=page,
+                html=html,
+                context=context,
+                config=config,
             )
 
             # Handle PDF and screenshot generation
@@ -2185,7 +2207,6 @@ class AsyncPlaywrightCrawlerStrategy(AsyncCrawlerStrategy):
                     # Wait for network idle after script execution
                     t1 = time.time()
                     await page.wait_for_load_state("domcontentloaded", timeout=5000)
-
 
                     t1 = time.time()
                     await page.wait_for_load_state("networkidle", timeout=5000)
